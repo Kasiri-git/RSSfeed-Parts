@@ -1,6 +1,7 @@
 <?php 
 /**
  * Plugin Name: RSSfeed-Parts
+ * Plugin URI: https://basekix.com
  * Description: WordPress用のRSSフィード表示ウィジェット
  * Version: 1.0.0
  * Author: Kasiri
@@ -27,7 +28,7 @@ function rssfeed_parts_add_menu() {
 
 // CSSファイルの読み込み
 function rssfeed_parts_load_custom_css() {
-    $css_file_url = plugin_dir_url(__FILE__) . 'rssfeed-parts-style.css';
+    $css_file_url = plugin_dir_url(__FILE__) . 'assets/css/rssfeed-parts-style.css';
     wp_enqueue_style('rssfeed_parts_custom_css', $css_file_url, array(), '1.0.0');
 }
 add_action('wp_enqueue_scripts', 'rssfeed_parts_load_custom_css');
@@ -148,6 +149,9 @@ function rssfeed_parts_settings_page() {
 
         <h2>プレビュー</h2>
         <?php echo do_shortcode('[rssfeed_parts_preview]'); ?>
+
+        <hr>
+        <a href="https://basekix.com" target="_blank"><img src="<?php echo plugin_dir_url(__FILE__) . 'assets/img/bgt.png'; ?>" alt="Basekix" /></a>
     </div>
     <?php
 }
@@ -162,7 +166,7 @@ add_shortcode('rssfeed_parts_preview', 'rssfeed_parts_preview_shortcode');
 
 // CSSファイルの保存
 function rssfeed_parts_save_custom_css_file($custom_css) {
-    $css_file_path = plugin_dir_path(__FILE__) . 'rssfeed-parts-style.css';
+    $css_file_path = plugin_dir_path(__FILE__) . 'assets/css/rssfeed-parts-style.css';
 
     // CSSファイルの書き込み
     if (is_writable($css_file_path)) {
