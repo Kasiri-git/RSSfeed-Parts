@@ -3,7 +3,7 @@
  * Plugin Name: RSSfeed-Parts
  * Plugin URI: https://basekix.com
  * Description: WordPress用のRSSフィード表示ウィジェット
- * Version: 1.0.0
+ * Version: 1.1.0
  * Author: Kasiri
  */
 
@@ -70,9 +70,22 @@ function rssfeed_parts_settings_page() {
     // CSSの保存処理
     if (isset($_POST['rssfeed_parts_custom_css'])) {
         $custom_css = $_POST['rssfeed_parts_custom_css'];
-        rssfeed_parts_save_custom_css_file($custom_css); // CSSファイルを保存する関数を呼び出す
-        update_option('rssfeed_parts_custom_css', $custom_css);
-        echo '<div class="updated"><p>CSSが保存されました。</p></div>';
+        $css_file_path = plugin_dir_path(__FILE__) . 'assets/css/rssfeed-parts-style.css';
+
+        // CSSファイルの書き込み
+        if (is_writable($css_file_path)) {
+            file_put_contents($css_file_path, $custom_css);
+            update_option('rssfeed_parts_custom_css', $custom_css);
+            echo '<div class="updated"><p>CSSが保存されました。</p></div>';
+        } else {
+            echo '<div class="error"><p>CSSファイルに書き込み権限がありません。</p></div>';
+        }
+    }
+
+    // フィードの再読み込み処理
+    if (isset($_POST['rssfeed_parts_reload_feeds'])) {
+        rssfeed_parts_reload_feeds();
+        echo '<div class="updated"><p>フィードが再読み込みされました。</p></div>';
     }
 
     ?>
@@ -150,6 +163,12 @@ function rssfeed_parts_settings_page() {
         <h2>プレビュー</h2>
         <?php echo do_shortcode('[rssfeed_parts_preview]'); ?>
 
+        <h2>フィードの再読み込み</h2>
+        <form method="post" action="">
+            <p>フィードのプレビューを再読み込みします。変更したフィードの内容を反映させるために使用してください。</p>
+            <button type="submit" name="rssfeed_parts_reload_feeds" class="button">フィードを再読み込み</button>
+        </form>
+
         <hr>
         <a href="https://basekix.com" target="_blank"><img src="<?php echo plugin_dir_url(__FILE__) . 'assets/img/bgt.png'; ?>" alt="Basekix" /></a>
     </div>
@@ -191,13 +210,16 @@ function rssfeed_parts_display_previews() {
             $rss = fetch_feed($feed_url);
 
             if (!is_wp_error($rss)) {
-                $max_items = $rss->get_item_quantity($display_count); // 表示する最大アイテム数
-                $rss_items = $rss->get_items(0, $max_items); // アイテムを取得
+                $rss->force_feed(true);
+                $rss->init();
+                $rss->set_cache_duration(60 * 5); // キャッシュの有効期間を5分に設定
 
-                foreach ($rss_items as $item) {
+                $items = $rss->get_items(0, $display_count);
+
+                foreach ($items as $item) {
                     $item_title = esc_html($item->get_title());
                     $item_link = esc_url($item->get_permalink()); // リンク先URL
-                    echo '<div class="rssfeed-parts-preview-item"><a href="' . $item_link . '">' . $item_title . '</a></div>';
+                    echo '<div class="rssfeed-parts-preview-item your-custom-class"><a href="' . $item_link . '"><span class="item-title">' . $item_title . '</span></a></div>';
                 }
             } else {
                 echo '<p>RSSフィードの取得に失敗しました: ' . esc_html($feed_url) . '</p>';
@@ -225,4 +247,25 @@ function get_site_title_from_feed($feed_url) {
     }
 
     return '';
+}
+
+// フィードを再読み込み
+function rssfeed_parts_reload_feeds() {
+    $registered_feeds = get_option('rssfeed_parts_feeds', array());
+
+    if (!empty($registered_feeds)) {
+        foreach ($registered_feeds as $feed) {
+            $feed_url = $feed['feed_url'];
+
+            // RSSフィードを取得
+            $rss = fetch_feed($feed_url);
+
+            if (!is_wp_error($rss)) {
+                $rss->force_feed(true);
+                $rss->init();
+                $rss->set_cache_duration(60 * 5); // キャッシュの有効期間を5分に設定
+                $rss->get_items(); // フィードの再読み込み
+            }
+        }
+    }
 }
